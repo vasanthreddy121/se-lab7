@@ -88,6 +88,7 @@ se-lab7/
 | `parse_scoreboard` | Unhandled `ValueError` (unpack) | `s=''` or `s='Alice:150,'` | Expected 2 tokens from `split(':')` | Validates `len(parts) == 2` per record |
 | `parse_scoreboard` | Unhandled `ValueError` (int) | `s='Alice:bad'` | Unchecked `int()` conversion | `try-except (ValueError, TypeError)` validation |
 | `parse_scoreboard` | Corrupt out-of-bounds scores | `s='Alice:-10'` | Accepted negative bowling scores | Enforces legal bowling score range `[0, 300]` |
+| `parse_scoreboard` | Non-ASCII numerals & signed scores | `s='Alice:١٥٠'` or `s='Alice:+150'` | Accepted Arabic-Indic digits or signed strings | Enforces `raw_score.isascii() and raw_score.isdecimal()` |
 | `parse_scoreboard` | Non-deterministic duplicate names | `s='Alice:100,Alice:200'` | Overwrote previous scores arbitrarily | High-score retention policy `max(old, new)` |
 
 ---
@@ -127,22 +128,23 @@ pytest test_bowling_alley_parser.py -v
 platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
 rootdir: /home/vasanth-reddy/Documents/se/lab7/Codex_Lab7_Task_Pack/se-lab7/LAB7
 plugins: hypothesis-6.170.15
-collected 10 items
+collected 11 items
 
-test_processor.py::test_format_player_name_no_crash PASSED               [ 10%]
-test_processor.py::test_format_player_name_valid_inputs PASSED           [ 20%]
-test_processor.py::test_parse_frame_no_crash PASSED                      [ 30%]
-test_processor.py::test_parse_frame_standard_cases PASSED                [ 40%]
-test_processor.py::test_parse_frame_invalid_inputs PASSED                [ 50%]
-test_processor.py::test_parse_frame_unicode_digits_regression PASSED     [ 60%]
-test_processor.py::test_parse_scoreboard_no_crash PASSED                 [ 70%]
-test_processor.py::test_parse_scoreboard_valid_cases PASSED              [ 80%]
-test_processor.py::test_parse_scoreboard_duplicate_names PASSED          [ 90%]
+test_processor.py::test_format_player_name_no_crash PASSED               [  9%]
+test_processor.py::test_format_player_name_valid_inputs PASSED           [ 18%]
+test_processor.py::test_parse_frame_no_crash PASSED                      [ 27%]
+test_processor.py::test_parse_frame_standard_cases PASSED                [ 36%]
+test_processor.py::test_parse_frame_invalid_inputs PASSED                [ 45%]
+test_processor.py::test_parse_frame_unicode_digits_regression PASSED     [ 54%]
+test_processor.py::test_parse_scoreboard_no_crash PASSED                 [ 63%]
+test_processor.py::test_parse_scoreboard_valid_cases PASSED              [ 72%]
+test_processor.py::test_parse_scoreboard_duplicate_names PASSED          [ 81%]
+test_processor.py::test_parse_scoreboard_ascii_score_regression PASSED   [ 90%]
 test_processor.py::test_parse_scoreboard_malformed_entries PASSED        [100%]
 
-============================== 10 passed in 2.13s ==============================
+============================== 11 passed in 0.47s ==============================
 ```
 
 - Total Property Tests: 3 property-based fuzz tests (each executing 100 random examples = 300 fuzz iterations).
-- Total Unit / Boundary / Regression Tests: 7 targeted domain tests (including Unicode numeric regression).
-- Status: **10 passed, 0 failed (100% pass rate)**.
+- Total Unit / Boundary / Regression Tests: 8 targeted domain tests (including Unicode numeric frame regression and ASCII scoreboard score regression).
+- Status: **11 passed, 0 failed (100% pass rate)**.
