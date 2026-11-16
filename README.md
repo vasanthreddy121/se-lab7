@@ -57,15 +57,16 @@ pytest test_processor.py -v
 ## Test Verification
 
 ```
-test_processor.py::test_format_player_name_no_crash PASSED               [ 11%]
-test_processor.py::test_format_player_name_valid_inputs PASSED           [ 22%]
-test_processor.py::test_parse_frame_no_crash PASSED                      [ 33%]
-test_processor.py::test_parse_frame_standard_cases PASSED                [ 44%]
-test_processor.py::test_parse_frame_invalid_inputs PASSED                [ 55%]
-test_processor.py::test_parse_scoreboard_no_crash PASSED                 [ 66%]
-test_processor.py::test_parse_scoreboard_valid_cases PASSED              [ 77%]
-test_processor.py::test_parse_scoreboard_duplicate_names PASSED          [ 88%]
+test_processor.py::test_format_player_name_no_crash PASSED               [ 10%]
+test_processor.py::test_format_player_name_valid_inputs PASSED           [ 20%]
+test_processor.py::test_parse_frame_no_crash PASSED                      [ 30%]
+test_processor.py::test_parse_frame_standard_cases PASSED                [ 40%]
+test_processor.py::test_parse_frame_invalid_inputs PASSED                [ 50%]
+test_processor.py::test_parse_frame_unicode_digits_regression PASSED     [ 60%]
+test_processor.py::test_parse_scoreboard_no_crash PASSED                 [ 70%]
+test_processor.py::test_parse_scoreboard_valid_cases PASSED              [ 80%]
+test_processor.py::test_parse_scoreboard_duplicate_names PASSED          [ 90%]
 test_processor.py::test_parse_scoreboard_malformed_entries PASSED        [100%]
 
-============================== 9 passed in 0.49s ===============================
+============================== 10 passed in 2.13s ==============================
 ```

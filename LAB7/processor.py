@@ -5,22 +5,24 @@ Student: Vasanth Kumar Reddy (PES2UG25CS829)
 Course: Software Engineering Lab - PES University
 
 Hardened implementation with comprehensive defensive input validation,
-robust type checking, safe fallbacks, and deterministic error handling.
-Resistant to crashes from fuzz-discovered edge cases and malicious inputs.
+robust type checking, safe fallbacks, decimal-digit validation, and deterministic error handling.
+Resistant to crashes from fuzz-discovered edge cases, Unicode numeric characters, and malicious inputs.
 """
 
 from typing import Dict, Tuple, Any, Optional
 
+DECIMAL_DIGITS = "0123456789"
+
 
 def format_player_name(name: Any) -> str:
     """
-    Format player name into title case, truncated to 15 characters.
+    Format player name into title case, truncated to 10 characters.
 
     Defensive Validation Policy:
     - If name is None, non-string, or empty/whitespace: returns fallback 'Anonymous'.
     - Strips leading/trailing whitespace and collapses internal multiple spaces.
     - Formats to Title Case.
-    - Truncates to a maximum length of 15 characters.
+    - Truncates to a maximum length of 10 characters.
     - Guarantees non-empty string without untrimmed whitespace.
     """
     if name is None or not isinstance(name, str):
@@ -31,9 +33,22 @@ def format_player_name(name: Any) -> str:
     if not cleaned:
         return "Anonymous"
 
-    # Format to Title Case and enforce max length 15
-    formatted = cleaned.title()[:15].strip()
+    # Format to Title Case and enforce max length 10
+    formatted = cleaned.title()[:10].strip()
     return formatted if formatted else "Anonymous"
+
+
+def _char_to_pins(c: str) -> Optional[int]:
+    """
+    Convert a single roll character to pins knocked down (0-9).
+    Returns integer pinfall for valid ASCII digits or '-' (gutter ball = 0).
+    Returns None for any non-decimal character (including Unicode superscripts like '²').
+    """
+    if c == "-":
+        return 0
+    if c in DECIMAL_DIGITS:
+        return int(c)
+    return None
 
 
 def parse_frame(frame_str: Any) -> Tuple[int, int]:
@@ -47,9 +62,11 @@ def parse_frame(frame_str: Any) -> Tuple[int, int]:
     - Safe fallback: (0, 0) on any invalid, malformed, or out-of-range input.
     - Validates type (must be str).
     - Checks for strike ('X' or 'x').
-    - Checks for spare ('/'): verifies roll 1 is a valid digit (0-9) or '-' (0),
+    - Robust Decimal Digit Validation: Rejects non-ASCII/Unicode digits (e.g. '²', '³')
+      that pass str.isdigit() but crash int() conversions or represent invalid notation.
+    - Spare validation: verifies roll 1 is a valid ASCII decimal digit (0-9) or '-' (0),
       and computes roll 2 as (10 - roll 1).
-    - Checks for open frame: verifies both rolls are valid digits or '-',
+    - Open frame validation: verifies both rolls are valid ASCII decimal digits or '-',
       and strictly enforces the fundamental bowling rule that roll1 + roll2 < 10
       (frames totaling >= 10 without spare notation, e.g. '88', are invalid).
     - Guarantees return value is always a 2-tuple (roll1, roll2) of integers
@@ -68,21 +85,16 @@ def parse_frame(frame_str: Any) -> Tuple[int, int]:
 
     # 2. Spare: length 2, second roll is '/'
     if len(s) == 2 and s[1] == "/":
-        c1 = s[0]
-        if c1 == "-":
-            r1 = 0
-        elif c1.isdigit():
-            r1 = int(c1)
-        else:
+        r1 = _char_to_pins(s[0])
+        if r1 is None:
             return (0, 0)
         return (r1, 10 - r1)
 
     # 3. Open frame or two rolls
     if len(s) == 2:
-        c1, c2 = s[0], s[1]
-        r1 = 0 if c1 == "-" else (int(c1) if c1.isdigit() else -1)
-        r2 = 0 if c2 == "-" else (int(c2) if c2.isdigit() else -1)
-        if r1 < 0 or r2 < 0:
+        r1 = _char_to_pins(s[0])
+        r2 = _char_to_pins(s[1])
+        if r1 is None or r2 is None:
             return (0, 0)
         # Bowling rule: open frame total pins must be strictly less than 10
         if r1 + r2 >= 10:
@@ -91,10 +103,9 @@ def parse_frame(frame_str: Any) -> Tuple[int, int]:
 
     # 4. Single roll fallback
     if len(s) == 1:
-        if s == "-":
-            return (0, 0)
-        if s.isdigit():
-            return (int(s), 0)
+        r1 = _char_to_pins(s[0])
+        if r1 is not None:
+            return (r1, 0)
 
     return (0, 0)
 
@@ -111,7 +122,7 @@ def parse_scoreboard(data: Any) -> Dict[str, int]:
     - Strict pair requirement: each entry must contain exactly one ':' delimiter.
     - Name validation: formats name via format_player_name; skips entry if name is empty.
     - Score validation: must parse to a valid integer within legal bowling game
-      range [0, 300]. Negative or >300 scores are ignored.
+      range [0, 300]. Validates ASCII decimal characters. Negative or >300 scores are ignored.
     - Duplicate names policy: retains the highest score achieved by the player.
     - Guarantees return value is always a Dict[str, int] with non-empty keys
       and scores in [0, 300].
@@ -135,7 +146,7 @@ def parse_scoreboard(data: Any) -> Dict[str, int]:
         if not raw_name:
             continue
 
-        # Format and validate player name
+        # Format and validate player name (10-char limit)
         name = format_player_name(raw_name)
         if not name:
             continue
@@ -163,7 +174,7 @@ def main():
     print("  BOWLING ALLEY PARSER - HARDENED SYSTEM DEMONSTRATION")
     print("=" * 60)
 
-    print("\n[1] Formatting Player Names (Happy Path & Edge Cases):")
+    print("\n[1] Formatting Player Names (Max 10 Chars & Safe Fallbacks):")
     sample_names = [
         "alice smith",
         "BOB JONES",
@@ -176,8 +187,8 @@ def main():
     for name in sample_names:
         print(f"    Input: {name!r:<42} -> Formatted: {format_player_name(name)!r}")
 
-    print("\n[2] Parsing Bowling Frames (Happy Path & Malformed Cases):")
-    sample_frames = ["X", "x", "7/", "45", "-5", "88", "abc", "", None]
+    print("\n[2] Parsing Bowling Frames (Happy Path, Unicode & Malformed Cases):")
+    sample_frames = ["X", "x", "7/", "45", "-5", "88", "²/", "²5", "abc", "", None]
     for frame in sample_frames:
         print(f"    Frame: {frame!r:<8} -> Rolls: {parse_frame(frame)}")
 

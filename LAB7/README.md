@@ -48,17 +48,17 @@ se-lab7/
 
 ### Function 1: `format_player_name(name)`
 - **Purpose:** Formats player names for the bowling alley scorecard display.
-- **Valid Behavior:** Strips surrounding whitespace, normalizes multiple internal spaces, converts to Title Case, and enforces a maximum length of 15 characters.
-- **Defensive Policy:** If `name` is `None`, non-string, or collapses to an empty string, returns the safe default fallback `"Anonymous"`. Guarantees a non-empty string with no untrimmed whitespace.
+- **Valid Behavior:** Strips surrounding whitespace, normalizes multiple internal spaces, converts to Title Case, and enforces a maximum length of 10 characters.
+- **Defensive Policy:** If `name` is `None`, non-string, or collapses to an empty string, returns the safe default fallback `"Anonymous"`. Guarantees a non-empty string with no untrimmed whitespace and length <= 10.
 
 ### Function 2: `parse_frame(frame_str)`
 - **Purpose:** Parses bowling frame strings into a 2-tuple `(roll1, roll2)` representing pins knocked down per roll.
 - **Valid Formats:**
   - Strike: `"X"` or `"x"` -> `(10, 0)`
-  - Spare: `"<d>/"` where `<d>` is `'0'`-`'9'` or `'-'` (gutter ball = 0) -> `(d, 10 - d)` (e.g. `"7/"` -> `(7, 3)`, `"-/"` -> `(0, 10)`)
-  - Open Frame: `"<d1><d2>"` where each roll is a digit or `'-'` -> `(d1, d2)` (e.g. `"45"` -> `(4, 5)`, `"-5"` -> `(0, 5)`)
-- **Domain Invariant:** In 10-pin bowling, open-frame rolls must satisfy `roll1 + roll2 < 10`. Frames totaling 10 or more without spare notation (e.g., `"88"`) are physically impossible and rejected.
-- **Defensive Policy:** Any `None`, non-string, malformed, empty, or rule-violating input safely returns fallback `(0, 0)`.
+  - Spare: `"<d>/"` where `<d>` is ASCII decimal `'0'`-`'9'` or `'-'` (gutter ball = 0) -> `(d, 10 - d)` (e.g. `"7/"` -> `(7, 3)`, `"-/"` -> `(0, 10)`)
+  - Open Frame: `"<d1><d2>"` where each roll is an ASCII decimal digit or `'-'` -> `(d1, d2)` (e.g. `"45"` -> `(4, 5)`, `"-5"` -> `(0, 5)`)
+- **Domain Invariant & Decimal Validation:** In 10-pin bowling, open-frame rolls must satisfy `roll1 + roll2 < 10`. Frames totaling 10 or more without spare notation (e.g., `"88"`) are physically impossible and rejected. Furthermore, non-ASCII/Unicode numeric characters (such as superscripts like `'²'`, `'³'`) that pass Python's `str.isdigit()` but fail `int()` conversions or violate bowling notation are strictly rejected.
+- **Defensive Policy:** Any `None`, non-string, malformed, empty, Unicode numeric, or rule-violating input safely returns fallback `(0, 0)`.
 
 ### Function 3: `parse_scoreboard(data)`
 - **Purpose:** Parses comma-separated `Name:Score` records into a dictionary mapping player names to integer scores.
@@ -83,6 +83,7 @@ se-lab7/
 | `parse_frame` | Unhandled `IndexError` | `f=''` | Unchecked string indexing `frame_str[0]` | Empty string check returning safe fallback `(0, 0)` |
 | `parse_frame` | Unhandled `ValueError` | `f='/'` or `f=':'` | Unchecked `int(frame_str[0])` conversion | Character validation against valid digits and `'-'` |
 | `parse_frame` | Invalid frame over-acceptance | `f='88'` | Blindly parsed `(8, 8)` = 16 pins > 10 | Strict domain check `roll1 + roll2 < 10` for open frames |
+| `parse_frame` | Unicode numeric crash | `f='²'` or `f='²/'` | `'²'.isdigit()` is True, but `int('²')` raises `ValueError` | Strict ASCII decimal validation via `_char_to_pins` (`c in '0123456789'`) |
 | `parse_scoreboard` | Unhandled `AttributeError` | `s=None` | Called `.split(',')` on `NoneType` | Returns empty dict `{}` on non-string |
 | `parse_scoreboard` | Unhandled `ValueError` (unpack) | `s=''` or `s='Alice:150,'` | Expected 2 tokens from `split(':')` | Validates `len(parts) == 2` per record |
 | `parse_scoreboard` | Unhandled `ValueError` (int) | `s='Alice:bad'` | Unchecked `int()` conversion | `try-except (ValueError, TypeError)` validation |
@@ -126,21 +127,22 @@ pytest test_bowling_alley_parser.py -v
 platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
 rootdir: /home/vasanth-reddy/Documents/se/lab7/Codex_Lab7_Task_Pack/se-lab7/LAB7
 plugins: hypothesis-6.170.15
-collected 9 items
+collected 10 items
 
-test_processor.py::test_format_player_name_no_crash PASSED               [ 11%]
-test_processor.py::test_format_player_name_valid_inputs PASSED           [ 22%]
-test_processor.py::test_parse_frame_no_crash PASSED                      [ 33%]
-test_processor.py::test_parse_frame_standard_cases PASSED                [ 44%]
-test_processor.py::test_parse_frame_invalid_inputs PASSED                [ 55%]
-test_processor.py::test_parse_scoreboard_no_crash PASSED                 [ 66%]
-test_processor.py::test_parse_scoreboard_valid_cases PASSED              [ 77%]
-test_processor.py::test_parse_scoreboard_duplicate_names PASSED          [ 88%]
+test_processor.py::test_format_player_name_no_crash PASSED               [ 10%]
+test_processor.py::test_format_player_name_valid_inputs PASSED           [ 20%]
+test_processor.py::test_parse_frame_no_crash PASSED                      [ 30%]
+test_processor.py::test_parse_frame_standard_cases PASSED                [ 40%]
+test_processor.py::test_parse_frame_invalid_inputs PASSED                [ 50%]
+test_processor.py::test_parse_frame_unicode_digits_regression PASSED     [ 60%]
+test_processor.py::test_parse_scoreboard_no_crash PASSED                 [ 70%]
+test_processor.py::test_parse_scoreboard_valid_cases PASSED              [ 80%]
+test_processor.py::test_parse_scoreboard_duplicate_names PASSED          [ 90%]
 test_processor.py::test_parse_scoreboard_malformed_entries PASSED        [100%]
 
-============================== 9 passed in 0.49s ===============================
+============================== 10 passed in 2.13s ==============================
 ```
 
 - Total Property Tests: 3 property-based fuzz tests (each executing 100 random examples = 300 fuzz iterations).
-- Total Unit / Boundary Tests: 6 targeted domain tests.
-- Status: **9 passed, 0 failed (100% pass rate)**.
+- Total Unit / Boundary / Regression Tests: 7 targeted domain tests (including Unicode numeric regression).
+- Status: **10 passed, 0 failed (100% pass rate)**.

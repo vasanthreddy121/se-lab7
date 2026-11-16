@@ -21,13 +21,13 @@ def test_format_player_name_no_crash(s):
     Property: For any string or None input, format_player_name must:
     1. Never raise an unhandled exception.
     2. Return a non-empty string fallback (e.g. 'Anonymous') if input is empty/whitespace/None.
-    3. Not exceed the maximum display length (15 characters).
+    3. Not exceed the maximum display length (10 characters).
     4. Not contain untrimmed leading or trailing whitespace.
     """
     result = format_player_name(s)
     assert isinstance(result, str), f"Expected str, got {type(result)}"
     assert len(result) > 0, "Formatted name should not be empty"
-    assert len(result) <= 15, f"Formatted name exceeds 15 chars: {result!r}"
+    assert len(result) <= 10, f"Formatted name exceeds 10 chars: {result!r}"
     assert result == result.strip(), f"Formatted name has untrimmed whitespace: {result!r}"
 
 
@@ -35,11 +35,11 @@ def test_format_player_name_no_crash(s):
 def test_format_player_name_valid_inputs(name):
     """
     Property: Valid non-empty alphabetic names should be properly title-cased
-    and truncated to at most 15 characters without crashing.
+    and truncated to at most 10 characters without crashing.
     """
     result = format_player_name(name)
     assert isinstance(result, str)
-    assert len(result) <= 15
+    assert len(result) <= 10
     assert result == result.strip()
 
 
@@ -82,6 +82,22 @@ def test_parse_frame_invalid_inputs():
     assert parse_frame("88") == (0, 0)  # 8 + 8 = 16 > 10 (invalid bowling frame)
     assert parse_frame("abc") == (0, 0)
     assert parse_frame(None) == (0, 0)
+
+
+def test_parse_frame_unicode_digits_regression():
+    """
+    Regression test: Ensure Unicode numeric characters (e.g. superscripts like '²')
+    are safely rejected and do not cause unhandled ValueError or bypass validation.
+    Python's str.isdigit() returns True for '²', but int('²') raises ValueError.
+    """
+    assert parse_frame("²") == (0, 0)
+    assert parse_frame("²/") == (0, 0)
+    assert parse_frame("²5") == (0, 0)
+    assert parse_frame("5²") == (0, 0)
+    assert parse_frame("²²") == (0, 0)
+    assert parse_frame("³/") == (0, 0)
+    assert parse_frame("¹") == (0, 0)
+    assert parse_frame("⁴0") == (0, 0)
 
 
 # ---------------------------------------------------------------------------
