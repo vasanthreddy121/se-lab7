@@ -151,11 +151,12 @@ def parse_scoreboard(data: Any) -> Dict[str, int]:
         if not name:
             continue
 
-        # Validate score integer and legal range [0, 300]
-        try:
-            score = int(raw_score)
-        except (ValueError, TypeError):
+        # Accept ASCII decimal digits only; reject Unicode numerals and signs.
+        if not raw_score or not raw_score.isascii() or not raw_score.isdecimal():
             continue
+
+        # Convert and validate legal bowling score range [0, 300].
+        score = int(raw_score)
 
         if not (0 <= score <= 300):
             continue
