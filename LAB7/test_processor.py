@@ -138,6 +138,17 @@ def test_parse_scoreboard_duplicate_names():
     assert result["Bob"] == 200
 
 
+def test_parse_scoreboard_ascii_score_regression():
+    """
+    Regression: scoreboard scores must use ASCII decimal digits only.
+    Reject Arabic-Indic digits and signed values, while accepting ordinary digits.
+    """
+    assert parse_scoreboard("Alice:١٥٠") == {}
+    assert parse_scoreboard("Alice:+150") == {}
+    assert parse_scoreboard("Alice:-150") == {}
+    assert parse_scoreboard("Alice:150") == {"Alice": 150}
+
+
 def test_parse_scoreboard_malformed_entries():
     """Verify defensive handling skips corrupt entries without crashing."""
     raw = "Alice:150,,Bob:bad,Charlie:-10,Dave:500,:100,Eve:200"
